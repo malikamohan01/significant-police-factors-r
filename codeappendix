@@ -1,0 +1,808 @@
+---
+title: "IndivProjectWork"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r}
+#load packages 
+library(dataQualityR)
+library(corrplot)
+library(ggplot2)
+library(ggpubr)
+library(scales)
+library(dplyr)
+library(tidyverse)
+library(MASS)
+```
+
+```{r}
+setwd('C:/Users/malik/Downloads')
+df <- read.csv('shootings2.csv')
+```
+
+```{r}
+head(df)
+summary(df)
+```
+
+```{r}
+#1D EDA - histograms, assess distributions 
+g1 <- ggplot(df, aes(manner_of_death))+ 
+  geom_histogram(color="darkblue", fill="lightblue", stat = "count") + 
+  labs(title = "Manner of Death Distribution") + 
+  theme(plot.title=element_text(hjust=0.5)) +
+  geom_vline(aes(xintercept=mean(manner_of_death)), color="blue", linetype="dashed", size=1) 
+
+g2 <- ggplot(df, aes(armed))+ 
+  geom_histogram(color="darkblue", fill="lightblue", stat = "count") + 
+  labs(title = "Armed Type Distribution") + 
+  theme(plot.title=element_text(hjust=0.5)) +
+  geom_vline(aes(xintercept=mean(armed)), color="blue", linetype="dashed", size=1)  
+
+g3 <- ggplot(df, aes(age))+ 
+  geom_histogram(color="darkblue", fill="lightblue", stat = "count") + 
+  labs(title = "Age Distribution") + 
+  theme(plot.title=element_text(hjust=0.5)) +
+  geom_vline(aes(xintercept=mean(age)), color="blue", linetype="dashed", size=1)  
+
+g4 <- ggplot(df, aes(gender))+ 
+  geom_histogram(color="darkblue", fill="lightblue", stat = "count") + 
+  labs(title = "Gender Distribution") + 
+  theme(plot.title=element_text(hjust=0.5)) +
+  geom_vline(aes(xintercept=mean(gender)), color="blue", linetype="dashed", size=1) 
+
+g5 <- ggplot(df, aes(race))+ 
+  geom_histogram(color="darkblue", fill="lightblue", stat = "count") + 
+  labs(title = "Race Distribution") + 
+  theme(plot.title=element_text(hjust=0.5)) +
+  geom_vline(aes(xintercept=mean(race)), color="blue", linetype="dashed", size=1) 
+
+g6 <- ggplot(df, aes(threat_level))+ 
+  geom_histogram(color="darkblue", fill="lightblue", stat = "count") + 
+  labs(title = "Threat Level Distribution") + 
+  theme(plot.title=element_text(hjust=0.5)) +
+  geom_vline(aes(xintercept=mean(threat_level)), color="blue", linetype="dashed", size=1) 
+
+g7 <- ggplot(df, aes(signs_of_mental_illness))+ 
+  geom_histogram(color="darkblue", fill="lightblue", stat = "count") + 
+  labs(title = "Mental Illness Distribution") + 
+  theme(plot.title=element_text(hjust=0.5)) +
+  geom_vline(aes(xintercept=mean(signs_of_mental_illness)), color="blue", linetype="dashed", size=1) 
+
+g8 <- ggplot(df, aes(flee))+ 
+  geom_histogram(color="darkblue", fill="lightblue", stat = "count") + 
+  labs(title = "Flee Distribution") + 
+  theme(plot.title=element_text(hjust=0.5)) +
+  geom_vline(aes(xintercept=mean(flee)), color="blue", linetype="dashed", size=1) 
+
+g9 <- ggplot(df, aes(body_camera))+ 
+  geom_histogram(color="darkblue", fill="lightblue", stat = "count") + 
+  labs(title = "Body Camera Distribution") + 
+  theme(plot.title=element_text(hjust=0.5)) +
+  geom_vline(aes(xintercept=mean(body_camera)), color="blue", linetype="dashed", size=1) 
+
+g10 <- ggplot(df, aes(arms_category))+ 
+  geom_histogram(color="darkblue", fill="lightblue", stat = "count") + 
+  labs(title = "Arms Category Distribution") + 
+  theme(plot.title=element_text(hjust=0.5))  +
+  geom_vline(aes(xintercept=mean(arms_category)), color="blue", linetype="dashed", size=1) 
+
+ggarrange(g1, g2, g3, g4, g5, g6, g7, g8, g9, g10, ncol=2, nrow=2)
+
+#flip labels on armed type and arms category 
+
+```
+
+
+```{r}
+#load background data 
+setwd('C:/Users/malik/Downloads')
+statedf <- read.csv('ShootingBackgroundData.csv')
+```
+```{r}
+#drop duplicate col 
+statedf <- subset(statedf, select = -c(Pct.White2, X) )
+```
+```{r}
+library(dplyr)
+#statedf <- statedf %>% 
+ # rename(
+  #  state = ï..State
+   # )
+
+#check 4 missing values 
+NAcol=which(colSums(is.na(df)) > 0)
+NAcol
+#no NA 
+```
+
+```{r}
+head(statedf)
+summary(statedf)
+```
+```{r}
+#create dfs for mapping plots
+stateincidents <- data.frame(statedf$state,statedf$Count)
+stateincidents <- stateincidents %>% 
+  rename(
+    state = statedf.state,
+    count = statedf.Count
+    )
+
+
+statepopsize <- data.frame(statedf$state, statedf$Pop.Size.2020)
+statepopsize <- statepopsize %>% 
+  rename(
+    state = statedf.state,
+    pop.size = statedf.Pop.Size.2020
+    )
+
+
+statepctperpop <- data.frame(statedf$state, statedf$Pct.Per.Pop)
+statepctperpop <- statepctperpop %>% 
+  rename(
+    state = statedf.state,
+    pct.per.pop = statedf.Pct.Per.Pop
+    )
+
+
+statepctwhite <- data.frame(statedf$state, statedf$Pct.White)
+statepctwhite <- statepctwhite %>% 
+  rename(
+    state = statedf.state,
+    pct.white = statedf.Pct.White
+    )
+
+
+statepovertyrate <- data.frame(statedf$state, statedf$Poverty.Rate)
+statepovertyrate <- statepovertyrate %>% 
+  rename(
+    state = statedf.state,
+    poverty.rate = statedf.Poverty.Rate
+    )
+
+
+stateincome <- data.frame(statedf$state,statedf$Median.HH.Income)
+stateincome <- stateincome %>% 
+  rename(
+    state = statedf.state,
+    income = statedf.Median.HH.Income
+    )
+
+
+statepolicespend <- data.frame(statedf$state,statedf$Police.Spending.Per.Capita)
+statepolicespend <- statepolicespend %>% 
+  rename(
+    state = statedf.state,
+    spend = statedf.Police.Spending.Per.Capita
+    ) 
+
+statemedianage <- data.frame(statedf$state,statedf$Median.Age)
+statemedianage <- statemedianage %>% 
+  rename(
+    state = statedf.state,
+    age = statedf.Median.Age
+    )
+```
+
+```{r}
+#eda for statedf data - state incidents 
+
+#histogram
+p1 <- ggplot(statedf, aes(Count))+ 
+  geom_histogram(color="darkblue", fill="lightblue") + 
+  labs(title = "Incidents Count 2015-2020 Distribution") + 
+  theme(plot.title=element_text(hjust=0.5))  +
+  geom_vline(aes(xintercept=mean(Count)), color="blue", linetype="dashed", size=1) 
+p1
+#transformation for normality
+p1transform <- ggplot(statedf, aes(log(Count)))+ 
+  geom_histogram(color="darkblue", fill="lightblue") + 
+  labs(title = "Incidents Count 2015-2020 Distribution") + 
+  theme(plot.title=element_text(hjust=0.5))  +
+  geom_vline(aes(xintercept=mean(log(Count))), color="blue", linetype="dashed", size=1) 
+p1transform
+
+#map
+plot_usmap(data = stateincidents, values = "count", color = "red", labels = TRUE) +
+  scale_fill_continuous(name = "Reported Police Incidents per State",low = "lightblue", high = "darkblue", label = scales::comma) + 
+  theme(legend.position = "left")
+
+
+#order high -> low 
+stateincidents[order(-stateincidents$count),]
+
+#summary stats:
+summary(stateincidents$count)
+
+
+#analysis: 
+```
+```{r}
+#eda for statedf data - state pop size 
+
+#histogram
+p2 <- ggplot(statedf, aes(Pop.Size.2020))+ 
+  geom_histogram(color="darkblue", fill="lightblue") + 
+  labs(title = "Population Size Distribution") + 
+  theme(plot.title=element_text(hjust=0.5))  +
+  geom_vline(aes(xintercept=mean(Count)), color="blue", linetype="dashed", size=1) 
+p2
+
+#map
+plot_usmap(data = statepopsize, values = "pop.size", color = "red", labels = TRUE) +
+  scale_fill_continuous(name = "State Estimated Population",low = "lightblue", high = "darkblue", label = scales::comma) + 
+  theme(legend.position = "left")
+
+#order high -> low 
+statepopsize[order(-statepopsize$pop.size),]
+
+#summary stats:
+summary(statepopsize$pop.size)
+
+#analysis: 
+```
+
+```{r}
+#eda for statedf data - state pct per pop 
+
+#histogram
+p3 <- ggplot(statedf, aes(Pct.Per.Pop))+ 
+  geom_histogram(color="darkblue", fill="lightblue") + 
+  labs(title = "Pct per Pop Distribution") + 
+  theme(plot.title=element_text(hjust=0.5))  +
+  geom_vline(aes(xintercept=mean(Count)), color="blue", linetype="dashed", size=1) 
+p3
+
+#map
+plot_usmap(data = statepctperpop, values = "pct.per.pop", color = "red", labels = TRUE) +
+  scale_fill_continuous(name = "Reported Police Incidents per Population in States",low = "lightblue", high = "darkblue", label = scales::comma) + 
+  theme(legend.position = "left")
+
+#order high -> low 
+statepctperpop[order(-statepctperpop$pct.per.pop),]
+
+#summary stats:
+summary(statepctperpop$pct.per.pop)
+
+#analysis: 
+```
+
+```{r}
+#eda for statedf data - state pct white
+
+#histogram
+p4 <- ggplot(statedf, aes(Pct.White))+ 
+  geom_histogram(color="darkblue", fill="lightblue") + 
+  labs(title = "Pct Non-Hispanic White Distribution") + 
+  theme(plot.title=element_text(hjust=0.5))  +
+  geom_vline(aes(xintercept=mean(Count)), color="blue", linetype="dashed", size=1) 
+p4
+
+#map
+plot_usmap(data = statepctwhite, values = "pct.white", color = "red", labels = TRUE) +
+  scale_fill_continuous(name = "Pct of State that is Non-Hispanic White",low = "lightblue", high = "darkblue", label = scales::comma) + 
+  theme(legend.position = "left")
+
+#order high -> low 
+statepctwhite[order(-statepctwhite$pct.white),]
+
+#summary stats:
+summary(statepctwhite$pct.white)
+
+#analysis: 
+```
+
+```{r}
+#eda for statedf data - state poverty rate 
+
+#histogram
+p5 <- ggplot(statedf, aes(Poverty.Rate))+ 
+  geom_histogram(color="darkblue", fill="lightblue") + 
+  labs(title = "Poverty Rate Distribution") + 
+  theme(plot.title=element_text(hjust=0.5))  +
+  geom_vline(aes(xintercept=mean(Count)), color="blue", linetype="dashed", size=1) 
+p5
+
+#map
+plot_usmap(data = statepovertyrate, values = "poverty.rate", color = "red", labels = TRUE) +
+  scale_fill_continuous(name = "Poverty Rate per State",low = "lightblue", high = "darkblue", label = scales::comma) + 
+  theme(legend.position = "left")
+
+#order high -> low 
+statepovertyrate[order(-statepovertyrate$poverty.rate),]
+
+#summary stats:
+summary(statepovertyrate$poverty.rate)
+
+#analysis: 
+```
+
+```{r}
+#eda for statedf data - state income
+
+#histogram
+p6 <- ggplot(statedf, aes(Median.HH.Income))+ 
+  geom_histogram(color="darkblue", fill="lightblue") + 
+  labs(title = "Median HH Income Distribution") + 
+  theme(plot.title=element_text(hjust=0.5))  +
+  geom_vline(aes(xintercept=mean(Median.HH.Income)), color="blue", linetype="dashed", size=1) 
+p6
+
+#map
+plot_usmap(data = stateincome, values = "income", color = "red", labels = TRUE) +
+  scale_fill_continuous(name = "Median HH Income per State",low = "lightblue", high = "darkblue", label = scales::comma) + 
+  theme(legend.position = "left")
+
+#order high -> low 
+stateincome[order(-stateincome$income),]
+
+#summary stats:
+summary(stateincome$income)
+
+#analysis: 
+```
+```{r}
+#eda for statedf data - police spending per capita 
+
+#histogram
+p7 <- ggplot(statedf, aes(Police.Spending.Per.Capita))+ 
+  geom_histogram(color="darkblue", fill="lightblue") + 
+  labs(title = "Police Spending Distribution") + 
+  theme(plot.title=element_text(hjust=0.5))  +
+  geom_vline(aes(xintercept=mean(Police.Spending.Per.Capita)), color="blue", linetype="dashed", size=1)
+p7
+
+#map
+plot_usmap(data = statepolicespend, values = "spend", color = "red", labels = TRUE) +
+  scale_fill_continuous(name = "Spending per Capita per State",low = "lightblue", high = "darkblue", label = scales::comma) + 
+  theme(legend.position = "left")
+
+#order high -> low 
+statepolicespend[order(-statepolicespend$spend),]
+
+#summary stats:
+summary(statepolicespend$spend)
+
+#analysis: 
+```
+```{r}
+#eda for statedf data - median age 
+
+#histogram
+p8 <- ggplot(statedf, aes(Median.Age))+ 
+  geom_histogram(color="darkblue", fill="lightblue") + 
+  labs(title = "Median Age Distribution") + 
+  theme(plot.title=element_text(hjust=0.5))  +
+  geom_vline(aes(xintercept=mean(Median.Age)), color="blue", linetype="dashed", size=1)
+p8
+
+#map
+plot_usmap(data = statemedianage, values = "age", color = "red", labels = TRUE) +
+  scale_fill_continuous(name = "Median Age per State",low = "lightblue", high = "darkblue", label = scales::comma) + 
+  theme(legend.position = "left")
+
+#order high -> low 
+statemedianage[order(-statemedianage$age),]
+
+#summary stats:
+summary(statemedianage$age)
+
+#analysis: 
+```
+```{r}
+#eda for statedf data - party
+summary(statedf$Party.Leaning.2020)
+sum(statedf$Party.Leaning.2020 == "Republican")
+sum(statedf$Party.Leaning.2020 == "Democrat")
+```
+
+
+```{r}
+#correlation matrix for statedf data 
+statedfcor <- subset(statedf, select = -c(state,Party.Leaning.2020, X) )
+correlations <- cor(statedfcor)
+library(ggcorrplot)
+ggcorrplot(correlations, lab=TRUE, color=c("blue", "white", "red"), title="Correlation Matrix") +
+ theme(plot.title=element_text(hjust=0.5))
+
+```
+
+```{r}
+#cor with variables of interest
+outcome_cor <- correlations[,"Count"]
+outcome_cor[order(-outcome_cor)]
+
+#positive correlations: pop size, poverty rate, police spending per capita
+#negative correlations: median hh income, median age, pct white 
+
+```
+
+```{r}
+#2d plots of correlated relationships 
+
+c1 <- plot(statedf$Pop.Size.2020, statedf$count, main = "Pop Size vs. Count of Incidents",
+     xlab = "Population Size", ylab = "Count",
+     pch = 19, frame = FALSE)
+
+c2 <- plot(statedf$Poverty.Rate, statedf$count, main = "Poverty Rate vs. Count of Incidents",
+     xlab = "Poverty Rate", ylab = "Count",
+     pch = 19, frame = FALSE)
+
+c3 <- plot(statedf$Police.Spending.Per.Capita, statedf$count, main = "Police Spending vs. Count of Incidents",
+     xlab = "Police Spending Per Capita", ylab = "Count",
+     pch = 19, frame = FALSE) 
+
+c4 <- plot(statedf$Median.HH.Income, statedf$count, main = "Median Income vs. Count of Incidents",
+     xlab = "Median HH Income", ylab = "Count",
+     pch = 19, frame = FALSE)
+
+c5 <- plot(statedf$Median.Age, statedf$count, main = "Median Age vs. Count of Incidents",
+     xlab = "Median Age", ylab = "Count",
+     pch = 19, frame = FALSE)
+
+c6 <- plot(statedf$Pct.White, statedf$count, main = "Pct White vs. Count of Incidents",
+     xlab = "Pct of Population Non-Hispanic White", ylab = "Count",
+     pch = 19, frame = FALSE)
+```
+```{r}
+#merge datasets on state code
+data <- merge(df,statedf,by="state")
+head(data)
+```
+
+```{r}
+#chi sq tests on relationships 
+
+#chisq.test(data$Count, data$race) #reject - dependent variables
+#chisq.test(data$Count, data$armed)# ftr 
+#chisq.test(data$Count, data$age) #reject -  dependent variables
+#chisq.test(data$Count, data$gender) #ftr
+#chisq.test(data$Count, data$signs_of_mental_illness) #reject -  dependent variables
+#chisq.test(data$Count, data$flee) #reject  -  dependent variables
+#chisq.test(data$Count, data$body_camera) #reject -  dependent variables
+#chisq.test(data$Count, data$Pct.White) #reject -  dependent variables
+#chisq.test(data$Count, data$Poverty.Rate) #reject -  dependent variables
+#chisq.test(data$Count, data$Party.Leaning.2020) #reject -  dependent variables
+#chisq.test(data$Count, data$Police.Spending.Per.Capita) #reject -  dependent variables
+
+
+
+#The null hypothesis of the Chi-Square test is that no relationship exists on the categorical variables in the population; they are independent.
+#if we reject the null hypothesis that there is no relationship and p < 0.05 then the variables are dependent. if p > 0.05 then we ftr the null hypothesis and variables are independent. 
+#H0 : the variables are independent, there is no relationship between the two categorical variables. Knowing the value of one variable does not help to predict the value of the other variable
+```
+
+```{r}
+#interaction effects (based on corr matrix and chi sq test)
+inter1 <- lm(Count ~ Median.HH.Income * Poverty.Rate, data = data)
+
+inter2 <- lm(Count ~ Police.Spending.Per.Capita * Pop.Size.2020, data = data)
+
+inter3 <- lm(Count ~ Police.Spending.Per.Capita * Median.HH.Income, data = data)
+
+inter4 <- lm(Count ~ Poverty.Rate * Pct.Per.Pop, data = data)
+
+#interaction plots
+library(ggplot2)
+library(interactions)
+library(jtools)
+inter1plot <- interact_plot(inter1, pred = Median.HH.Income, modx = Poverty.Rate)
+
+inter2plot <- interact_plot(inter2, pred = Police.Spending.Per.Capita, modx = Pop.Size.2020) 
+
+inter3plot <- interact_plot(inter3, pred = Police.Spending.Per.Capita, modx = Median.HH.Income)
+
+inter4plot <- interact_plot(inter4, pred = Poverty.Rate, modx = Pct.Per.Pop)
+
+#show plots
+inter1plot
+inter2plot
+inter3plot
+inter4plot
+
+#slight interaction effects exist btwn poverty rate & median hh income , median hh income & police spending , pct of counts per pop & poverty rate 
+```
+  
+
+
+```{r}
+#plots w variables of interest / dependent based off chi sq tests : 
+
+#variable 1 - race (keep)
+data$race <-factor(data$race, levels=c("Asian","Black","Hispanic","Native","White", "Other"))
+
+v1 <- ggplot(data, aes(factor(race), Count, fill=factor(race))) + 
+  geom_boxplot() +
+  labs(x = " Victim Race", y = "Count of Shootings", title = "Boxplot of Race vs. Count of Shootings") + 
+  theme(legend.position = 'none', plot.title = element_text(size = 9, hjust=0.5)) + ylim(0,350)
+v1
+
+
+#variable 2 - age (maybe)
+v2 <- ggplot(data, aes(x=age, y=Count)) +
+    geom_point(shape=1) +    # Use hollow circles
+    geom_smooth(method=lm,   # Add linear regression line
+                se=FALSE)    # Don't add shaded confidence region
+v2
+
+
+#variable 3 - sign of mental illness (omit but interesting as cops may use this as reason)
+data$signs_of_mental_illness <-factor(data$signs_of_mental_illness, levels=c("TRUE","FALSE"))
+
+v3 <- ggplot(data, aes(factor(signs_of_mental_illness), Count, fill=factor(signs_of_mental_illness))) + 
+  geom_boxplot() +
+  labs(x = "Mental Illness Signs in Victim", y = "Count of Shootings", title = "Boxplot of Mental Illness Signs vs. Count of Shootings") + 
+  theme(legend.position = 'none', plot.title = element_text(size = 9, hjust=0.5)) + ylim(0,350)
+v3
+#test<- lm(Count~signs_of_mental_illness, data = data)
+#summary(test)
+
+#variable 4 - flee (probably omit)
+data$flee <-factor(data$flee, levels=c("Car","Foot","Not fleeing","Other"))
+
+v4 <- ggplot(data, aes(factor(flee), Count, fill=factor(flee))) + 
+  geom_boxplot() +
+  labs(x = "Victim Flee Attempt", y = "Count of Shootings", title = "Boxplot of Suspect Fleeing Type vs. Count of Shootings") + 
+  theme(legend.position = 'none', plot.title = element_text(size = 9, hjust=0.5)) + ylim(0,350)
+v4
+
+
+#variable 5 - body camera (keep)
+data$body_camera <-factor(data$body_camera, levels=c("TRUE","FALSE"))
+
+v5 <- ggplot(data, aes(factor(body_camera), Count, fill=factor(body_camera))) + 
+  geom_boxplot() +
+  labs(x = "Body Camera Presence", y = "Count of Shootings", title = "Boxplot of Body Camera vs. Count of Shootings") + 
+  theme(legend.position = 'none', plot.title = element_text(size = 9, hjust=0.5)) + ylim(0,350)
+v5
+
+#variable 6 - pct white (keep)
+v6 <- ggplot(data, aes(x=Pct.White, y=Count)) +
+    geom_point(shape=1) +    # Use hollow circles
+    geom_smooth(method=lm,   # Add linear regression line
+                se=FALSE)    # Don't add shaded confidence region
+v6
+#variable 7 - poverty rate (keep)
+v7 <- ggplot(data, aes(x=Poverty.Rate, y=Count)) +
+    geom_point(shape=1) +    # Use hollow circles
+    geom_smooth(method=lm,   # Add linear regression line
+                se=FALSE)    # Don't add shaded confidence region
+v7
+
+#variable 8 - party leaning (keep)
+data$Party.Leaning.2020 <-factor(data$Party.Leaning.2020, levels=c("Democrat","Republican"))
+
+v8 <- ggplot(data, aes(factor(Party.Leaning.2020), Count, fill=factor(Party.Leaning.2020))) + 
+  geom_boxplot() +
+  labs(x = "State Political Party", y = "Count of Shootings", title = "State Political Party vs. Count of Shootings") + 
+  theme(legend.position = 'none', plot.title = element_text(size = 9, hjust=0.5)) + ylim(0,350)
+v8
+
+#variabel 9 - police spending per capita (keep)
+v9 <- ggplot(data, aes(x=Police.Spending.Per.Capita, y=Count)) +
+    geom_point(shape=1) +    # Use hollow circles
+    geom_smooth(method=lm,   # Add linear regression line
+                se=FALSE)    # Don't add shaded confidence region
+v9 <- v9 + xlim(0,500)
+v9
+```
+
+```{r}
+#boxcox - figure out what type of transformations to apply
+library(MASS)
+lmtest <- lm(Count~ Pop.Size.2020 + Poverty.Rate + Police.Spending.Per.Capita + Median.HH.Income + Pct.White + race + age + signs_of_mental_illness + flee + body_camera + Party.Leaning.2020,data=data)
+summary(lmtest)
+bc <- boxcox(lmtest)
+optimal_lambda <- bc$x[which(bc$y == max(bc$y))]
+optimal_lambda
+round(optimal_lambda)
+
+```
+```{r}
+library(ggplot2)
+letssee <- ggplot(data, aes(sqrt(Count)))+ 
+  geom_histogram(color="darkblue", fill="lightblue", stat = "count") + 
+  labs(title = "Count Distribution") + 
+  theme(plot.title=element_text(hjust=0.5)) +
+  geom_vline(aes(xintercept=mean(sqrt(Count))), color="blue", linetype="dashed", size=1) 
+letssee
+```
+
+```{r}
+#applying transformation 
+lmtest2 <- lm(sqrt(Count)~ Pop.Size.2020 + Poverty.Rate + Police.Spending.Per.Capita + Median.HH.Income + Pct.White + race + age + signs_of_mental_illness + flee + body_camera + Party.Leaning.2020,data=data)
+summary(lmtest2)
+```
+```{r}
+#model 1 iteration cont. -- omitting flee and mental illness from prev based off significance & eda findings
+lm3 <- lm(sqrt(Count)~ Pop.Size.2020 + Poverty.Rate + Police.Spending.Per.Capita + Median.HH.Income + Pct.White + race + age + body_camera + Party.Leaning.2020,data=data)
+summary(lm3)
+```
+
+
+
+```{r}
+#model 1 evaluation 
+
+#install.packages("caret")
+library(caret)
+#CV for model1
+set.seed(10) 
+#Cross-Validation
+# Train the model
+train.control <- trainControl(method = "cv", number = 10) #cv 
+model1 <- train(sqrt(Count)~ Poverty.Rate + Pct.Per.Pop + Police.Spending.Per.Capita + Median.HH.Income + Pct.White + race + age + body_camera + Party.Leaning.2020, data = data, method = "lm",
+               trControl = train.control)
+#summary of model
+summary(model1)
+print(model1)
+
+#model eval stats: RMSE: 4.82, R-squared: 0.46, MAE: 3.76 
+```
+
+```{r}
+#model 2 work
+#lasso model
+moddata <- subset(data, select = -c(state, date, city, Pop.Size.2020) )
+library(glmnet)
+x <- model.matrix(Count~.,moddata)[,-2]
+y <- moddata$Count
+mod <- cv.glmnet(as.matrix(x), y, alpha=1) #lasso
+mod2 <- cv.glmnet(as.matrix(x),y,alpha=0) #ridge
+```
+```{r}
+#model 2 work
+#to see coefficients with minimum CV error 
+as.matrix(coef(mod, mod$lambda.min))
+#To see the coefficients with the "largest value of lambda such that error is within 1 standard error of the minimum":
+as.matrix(coef(mod, mod$lambda.1se))
+```
+```{r}
+#You can also select any other value of lambda that you want. Coefficients that are 0 have been dropped out of the model
+CF <- as.matrix(coef(mod, mod$lambda.1se))
+CF[CF!=0,]
+```
+
+```{r}
+#running model with above variables 
+model2 <- lm(Count ~ race + Pct.Per.Pop + Poverty.Rate + Police.Spending.Per.Capita +
+ Pct.White + Party.Leaning.2020, data=moddata)
+summary(model2)
+
+```
+
+
+```{r}
+# Define training control
+set.seed(123) 
+train.control <- trainControl(method = "cv", number = 10) #cv Cross-Validation
+# Train the model
+model2<- train(sqrt(Count) ~ race + Pct.Per.Pop + Poverty.Rate + Police.Spending.Per.Capita +
+ Pct.White + Party.Leaning.2020, data=moddata, method = "lm",
+               trControl = train.control)
+# Summarize the results
+print(model2)
+summary(model2)
+#RMSE - 4.87 #r2 - 0.45 #MAE- 3.77  (lasso)
+```
+
+```{r}
+#ridge
+mod$lambda.min
+mod2$lambda.min
+#ridge <- glmnet(x, y, alpha = 1, lambda = mod2$lambda.min)
+CF <- as.matrix(coef(mod2, mod2$lambda.1se))
+CF[CF!=0,]
+
+# Define training control
+set.seed(123) 
+train.control <- trainControl(method = "cv", number = 10) #cv Cross-Validation
+# Train the model
+ridgemodel<- train(sqrt(Count) ~ race + signs_of_mental_illness + threat_level + flee + body_camera + arms_category + Pct.Per.Pop + Pct.White + Median.HH.Income + Party.Leaning.2020 + Police.Spending.Per.Capita + Median.Age, data=moddata, method = "lm",
+               trControl = train.control)
+
+```
+```{r}
+# ridge summary and eval
+summary(ridgemodel)
+print(ridgemodel)
+#RSME - 4.41, r squared - 0.55, mae - 3.47 
+```
+
+
+
+
+```{r}
+#random forest model 
+library(randomForest)
+library(mlbench)
+library(caret) 
+
+# partition 
+#Create Evaluation Sets
+set.seed(123)
+n = nrow(moddata)
+trainIndex = sample(1:n, size = round(0.7*n), replace=FALSE)
+```
+
+```{r}
+#Creates training and test set from observations 
+training = moddata[trainIndex,]
+testing = moddata[-trainIndex,]
+
+model3 <- randomForest(sqrt(Count) ~ ., training, mtry = 3, 
+                         importance = TRUE, na.action = na.omit)
+print(model3)
+
+#Plot the error vs the number of trees graph 
+plot(model3) 
+```
+```{r}
+model3$mse[length(model3$mse)]
+sqrt(model3$mse[length(model3$mse)])
+#rmse = 1.62 
+```
+
+```{r}
+#model3 / random forest evaluation 
+varImp(model3)
+varImpPlot(model3,type=2,n.var=min(10, nrow(model3$importance)))
+# obtain MSE as of last element in fit$mse
+# which should match the output from printout
+model3$mse[length(model3$mse)]
+# take square root to calculate RMSE for the model
+sqrt(model3$mse[length(model3$mse)])
+predValues <- predict(model3,testing)
+
+# we can calculate it  directly 
+library("ie2misc")
+predValues <- predict(model3,testing)
+sqrt(mean((log(testing$Count+1) -predValues)^2)) #  RMSE - 10.43
+mean(abs(log(testing$Count+1) -predValues)) # MAE - 8.79 
+```
+
+
+```{r}
+#models evaluation plot 
+#model 1 - linear, model 2 - lasso, model 3 - ridge, model 4 - random forest
+#data:
+#model 1, model 2 (lasso), model 3 (ridge), model 4 (random forest)
+Model <- c("1", "2", "3","4")
+R_squared <- c(0.46,0.45,0.55,0.94)
+RMSE <- c(4.81,4.87,4.41,10.43)
+MAE <- c(3.75,3.77,3.47,8.79)
+ml <- data.frame(Model, R_squared, RMSE, MAE)
+
+```
+
+```{r}
+#models evaluation plot
+#install.packages("gridExtra")
+library(gridExtra)
+
+e1 <- ggplot(ml, aes(Model, R_squared)) + geom_point(aes(colour = factor(Model), size = 4)) + labs(title="R-Squared") + theme(plot.title=element_text(hjust=0.5), axis.title.y = element_blank(),axis.title.x = element_blank(), legend.position="none")
+
+e2 <- ggplot(ml, aes(Model, RMSE)) + geom_point(aes(colour = factor(Model), size = 4)) + labs(title="RMSE") + theme(plot.title=element_text(hjust=0.5), axis.title.y = element_blank(),axis.title.x = element_blank(), legend.position="none")
+
+e3 <- ggplot(ml, aes(Model, MAE)) + geom_point(aes(colour = factor(Model), size = 4)) + labs(title="MAE") + theme(plot.title=element_text(hjust=0.5), axis.title.y = element_blank(),axis.title.x = element_blank(), legend.position="none")
+
+
+grid.arrange(e1,e2,e3, ncol=3)
+```
+
+
+
+
+
+
